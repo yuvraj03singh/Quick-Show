@@ -1,5 +1,7 @@
 import { Inngest } from "inngest";
 import User from "../model/User.js";
+import connectDB from "../configs/db.js";
+import mongoose from "mongoose";
 
 // Create Inngest client
 export const inngest = new Inngest({ id: "movie-ticket-booking" });
@@ -12,8 +14,12 @@ const syncUserCreation = inngest.createFunction(
   },
   async ({ event }) => {
     try {
-      const { id, first_name, last_name, email_addresses, image_url } =
-        event.data;
+      // Ensure DB connection is established (safe-guard in case this runs outside server lifecycle)
+      if (mongoose.connection.readyState !== 1) await connectDB();
+
+      // Support payloads where Clerk nests the user under `data.user`
+      const payload = event?.data?.user || event?.data || {};
+      const { id, first_name, last_name, email_addresses, image_url } = payload;
 
       const userData = {
         _id: id,
@@ -22,13 +28,13 @@ const syncUserCreation = inngest.createFunction(
         image: image_url || "",
       };
 
-      console.log("Creating User:", userData);
+      console.log("Creating User:", JSON.stringify(userData));
 
       const user = await User.create(userData);
 
       console.log("User Created Successfully:", user);
     } catch (error) {
-      console.log("User Creation Error:", error.message);
+      console.error("User Creation Error:", error);
     }
   }
 );
@@ -41,13 +47,16 @@ const syncUserDeletion = inngest.createFunction(
   },
   async ({ event }) => {
     try {
-      const { id } = event.data;
+      if (mongoose.connection.readyState !== 1) await connectDB();
+
+      const payload = event?.data?.user || event?.data || {};
+      const { id } = payload;
 
       await User.findByIdAndDelete(id);
 
       console.log("User Deleted Successfully:", id);
     } catch (error) {
-      console.log("User Deletion Error:", error.message);
+      console.error("User Deletion Error:", error);
     }
   }
 );
@@ -60,8 +69,10 @@ const syncUserUpdation = inngest.createFunction(
   },
   async ({ event }) => {
     try {
-      const { id, first_name, last_name, email_addresses, image_url } =
-        event.data;
+      if (mongoose.connection.readyState !== 1) await connectDB();
+
+      const payload = event?.data?.user || event?.data || {};
+      const { id, first_name, last_name, email_addresses, image_url } = payload;
 
       const userData = {
         _id: id,
@@ -77,7 +88,7 @@ const syncUserUpdation = inngest.createFunction(
 
       console.log("User Updated Successfully:", updatedUser);
     } catch (error) {
-      console.log("User Update Error:", error.message);
+      console.error("User Update Error:", error);
     }
   }
 );

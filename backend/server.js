@@ -17,7 +17,7 @@ await connectDB()
 app.use(express.json())
 app.use(cors())
 app.use(clerkMiddleware())
-// api routes
+
 
 app.get('/',(req,res)=>res.send("Server is live!"))
 
