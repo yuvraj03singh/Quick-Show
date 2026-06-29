@@ -5,6 +5,7 @@ import { clerkMiddleware } from '@clerk/express'
 import connectDB from "./configs/db.js";
 import { inngest,functions } from "./inngest/index.js";
 import {serve} from "inngest/express";
+import showRouter from './routes/showRoutes.js'
 
 
 const app=express();
@@ -22,5 +23,6 @@ app.use(clerkMiddleware())
 app.get('/',(req,res)=>res.send("Server is live!"))
 
 app.use('/api/inngest',serve({client: inngest,functions}))
+app.use('/api/show',showRouter)
 
 app.listen(port,()=> console.log(`Server listening at http://localhost:${port}`))
