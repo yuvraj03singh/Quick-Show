@@ -1,19 +1,25 @@
-import {clerkClient} from "@clerk/express";
+import { clerkClient, getAuth } from "@clerk/express";
 
-export const protectAdmin=async (req,res,next)=>{
-    try {
-        const {userId}=req.auth();
+export const protectAdmin = async (req, res, next) => {
+  try {
+    const { userId } = getAuth(req);
 
-        const user=await clerkClient.users.getUser(userId);
+    // console.log("USER ID:", userId);
 
-        if(user.privateMetadata.role!=='admin'){
-            return res.status(403).json({message:"Access denied"})
-        } 
+    const user = await clerkClient.users.getUser(userId);
 
-        else{
-            next();
-        }
-    }catch (error) {
-        return res.json({success:false,message:"Not authorized user"});
-    }   
-}
+    // console.log("PRIVATE METADATA:", user.privateMetadata);
+    // console.log("ROLE:", user.privateMetadata.role);
+
+    if (user.privateMetadata.role !== "admin") {
+      return res.status(403).json({
+        success: false,
+        message: "Access denied",
+      });
+    }
+
+    next();
+  } catch (error) {
+    console.log(error);
+  }
+};

@@ -142,25 +142,74 @@ export const addShow = async (req, res) => {
 };
 
 
+
 //api to get all shows
+
+
 export const getShows = async (req, res) => {
   try {
-    const shows = await Show.find({showDateTime: { $gte: new Date() } }).populate("movie").sort({ showDateTime: 1 });
-    const uniqueShows = new Set(shows.map(show=>show.movie))
+    const shows = await Show.find({})
+      .populate("movie")
+      .sort({ createdAt: -1 });
+
+    const uniqueShows = [
+      ...new Map(
+        shows.map((show) => [show.movie._id.toString(), show.movie])
+      ).values(),
+    ];
 
     res.json({
       success: true,
-      shows: Array.from(uniqueShows),
+      shows: uniqueShows,
     });
-  }
-catch (error) {
-
+  } catch (error) {
     console.error("Get Shows Error:", error.message);
 
     res.json({
       success: false,
       message: error.message,
     });
-
   }
-}
+};
+
+export const getShow = async (req, res) => {
+  try {
+    const { movieId } = req.params;
+
+    const [shows, movie] = await Promise.all([
+    Show.find({ movie: movieId }),
+    Movie.findById(movieId)
+]);
+
+    const dateTime = {};
+
+    shows.forEach((show) => {
+    Object.entries(show.showDateTime).forEach(([date, times]) => {
+    if (!dateTime[date]) {
+      dateTime[date] = [];
+    }
+
+    if (Array.isArray(times)) {
+      times.forEach((time) => {
+        dateTime[date].push({
+          time,
+          showId: show._id,
+        });
+      });
+    } else {
+      dateTime[date].push({
+        time: times,
+        showId: show._id,
+      });
+    }
+  });
+});
+  } catch (error) {
+    console.error("Get Show Error:", error.message);
+
+    res.json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
