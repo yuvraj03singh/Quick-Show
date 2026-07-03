@@ -1,40 +1,51 @@
-import express from "express"
-import cors from "cors"
+
+import express from "express";
+import cors from "cors";
 import "dotenv/config";
-import { clerkMiddleware } from '@clerk/express'
+import { clerkMiddleware } from "@clerk/express";
 import connectDB from "./configs/db.js";
-import { inngest,functions } from "./inngest/index.js";
-import {serve} from "inngest/express";
-import showRouter from './routes/showRoutes.js'
-import bookingRouter from './routes/bookingRoutes.js'
-import adminRouter from './routes/adminRoutes.js'
-import userRouter from './routes/userRoutes.js'
+import { inngest, functions } from "./inngest/index.js";
+import { serve } from "inngest/express";
 
+import showRouter from "./routes/showRoutes.js";
+import bookingRouter from "./routes/bookingRoutes.js";
+import deleteRouter from "./routes/deleteRoutes.js";
+import adminRouter from "./routes/adminRoutes.js";
+import userRouter from "./routes/userRoutes.js";
+import { stripeWebhookHandler } from "./controllers/stripeWebhooks.js";
+const app = express();
+const port = 3000;
 
+await connectDB();
 
-const app=express();
-const port=3000;
+// Stripe webhook endpoint
+app.use(
+  "/api/stripe",
+  express.raw({ type: "application/json" }),
+  stripeWebhookHandler
+);
 
-await connectDB()
+// Middleware
+app.use(express.json());
+app.use(clerkMiddleware());
 
-// middleware
+app.use(
+  cors({
+    origin: "http://localhost:5173",
+    credentials: true,
+  })
+);
 
-app.use(express.json())
-app.use(clerkMiddleware())
-app.use(cors({
-  origin: "http://localhost:5173",
-  credentials: true
-}))
+app.get("/", (req, res) => res.send("Server is live!"));
 
+app.use("/api/inngest", serve({ client: inngest, functions }));
+app.use("/api/show", showRouter);
+app.use("/api/booking", bookingRouter);
+app.use("/api/delete", deleteRouter);
+app.use("/api/admin", adminRouter);
+app.use("/api/user", userRouter);
 
-app.get('/',(req,res)=>res.send("Server is live!"))
+app.listen(port, () =>
+  console.log(`Server listening at http://localhost:${port}`)
+);
 
-app.use('/api/inngest',serve({client: inngest,functions}))
-app.use('/api/show',showRouter)
-app.use('/api/booking',bookingRouter)
-app.use('/api/admin',adminRouter)
-app.use('/api/user',userRouter)
-
-
-
-app.listen(port,()=> console.log(`Server listening at http://localhost:${port}`))

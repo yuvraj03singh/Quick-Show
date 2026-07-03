@@ -3,12 +3,15 @@ import { Link, useNavigate } from "react-router-dom";
 import { assets } from "../assets/assets";
 import { Menu, SearchIcon, TicketPlus, X } from "lucide-react";
 import { useUser, useClerk, UserButton } from "@clerk/react";
+import { useAppContext } from "../context/AppContext";
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const { user } = useUser();
   const { openSignIn } = useClerk();
   const navigate = useNavigate();
+
+  const{favorites}=useAppContext();
 
   return (
     <div className="fixed top-0 left-0 z-50 w-full flex items-center justify-between px-6 md:px-16 lg:px-36 py-5">
@@ -29,20 +32,29 @@ const Navbar = () => {
           onClick={() => setIsOpen(false)}
         />
 
-        {["Home", "Movies", "Theaters", "Releases", "Favorites"].map(
-          (item, index) => (
-            <Link
-              key={index}
-              to={item === "Movies" ? "/movies" : item === "Favorites" ? "/favorite" : "/"}
-              onClick={() => {
-                scrollTo(0, 0);
-                setIsOpen(false);
-              }}
-            >
-              {item}
-            </Link>
-          )
-        )}
+{["Home", "Movies", "Theaters", "Releases", "Favorites"].map(
+  (item, index) =>
+    (item !== "Favorites" || favorites.length > 0) && (
+      <Link
+        key={index}
+        to={
+          item === "Movies"
+            ? "/movies"
+            : item === "Favorites"
+            ? "/favorite"
+            : "/"
+        }
+        onClick={() => {
+          scrollTo(0, 0);
+          setIsOpen(false);
+        }}
+      >
+        {item}
+      </Link>
+    )
+)}
+
+
       </div>
 
       <div className="flex items-center gap-8">

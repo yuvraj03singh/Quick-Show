@@ -1,15 +1,38 @@
-import { clerkClient, getAuth } from "@clerk/express";
+import { clerkClient,getAuth } from "@clerk/express";
 
-export const protectAdmin = async (req, res, next) => {
+export const protectRoute = async (req, res, next) => {
   try {
     const { userId } = getAuth(req);
 
-    // console.log("USER ID:", userId);
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized: No user ID found",
+      });
+    }
+
+    next();
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+export const protectAdmin = async (req, res, next) => {
+  try {
+    const { userId } = req.auth();
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized: No user ID found",
+      });
+    }
 
     const user = await clerkClient.users.getUser(userId);
-
-    // console.log("PRIVATE METADATA:", user.privateMetadata);
-    // console.log("ROLE:", user.privateMetadata.role);
 
     if (user.privateMetadata.role !== "admin") {
       return res.status(403).json({
@@ -20,6 +43,10 @@ export const protectAdmin = async (req, res, next) => {
 
     next();
   } catch (error) {
-    console.log(error);
+    console.error(error);
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 };

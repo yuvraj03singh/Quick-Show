@@ -6,16 +6,16 @@ import { getAuth } from "@clerk/express";
 
 export const getUserBookings = async (req, res) => {
     try {
-        const user = req.auth?.userId;
+        const {userId} = getAuth(req);
 
-        if (!user) {
+        if (!userId) {
             return res.status(401).json({
                 success: false,
                 message: "Unauthorized",
             });
         }
 
-        const bookings = await Booking.find({ user}).populate({
+        const bookings = await Booking.find({ user: userId }).populate({
             path: "show",
             populate: { path: "movie" },
         }).sort({ createdAt: -1 });
@@ -39,7 +39,7 @@ export const getUserBookings = async (req, res) => {
     export const updateFavorite = async (req, res) => {
         try {
             const { movieId } = req.body;   
-            const userId = req.auth?.userId;
+            const {userId} = getAuth(req);
 
             if (!userId) {
                 return res.status(401).json({

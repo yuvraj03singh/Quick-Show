@@ -14,6 +14,7 @@ export const AppProvider = ({ children }) => {
   const [shows, setShows] = useState([]);
   const [favorites, setFavorites] = useState([]);
   const [loading, setLoading] = useState(true);
+  const image_base_url=import.meta.env.VITE_TMDB_IMAGE_BASE_URL || "https://image.tmdb.org/t/p/original";
 
   const { user } = useUser();
   const { getToken, isLoaded, isSignedIn } = useAuth();
@@ -61,7 +62,11 @@ export const AppProvider = ({ children }) => {
     const token = await getToken();
     // console.log("FRONTEND TOKEN:", token);
 
-    if (!token) return;
+    if (!token){
+      setFavorites([]);
+      return;
+    } 
+      
 
     const { data } = await axios.get("/api/user/favorites", {
       headers: {
@@ -96,6 +101,7 @@ export const AppProvider = ({ children }) => {
     favorites,
     fetchFavoritesMovies,
     fetchShows,
+    image_base_url
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

@@ -1,12 +1,18 @@
-const isoTimeFormat=(dateTime)=>{
-    const date=new Date(dateTime);
-    const localTime=date.toLocaleTimeString('en-US',{
-        hours:'2-digit',
-        minutes:'2-digit',
-        hour12:true,
-    });
+const isoTimeFormat = (time) => {
+  if (!time) return "";
 
-    return localTime;
-}
+  const [hour, minute] = time.split(":");
 
-export default isoTimeFormat
+  const date = new Date();
+  date.setHours(Number(hour));
+  date.setMinutes(Number(minute));
+  date.setSeconds(0);
+
+  return date.toLocaleTimeString("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  });
+};
+
+export default isoTimeFormat;
