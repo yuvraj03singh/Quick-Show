@@ -25,8 +25,7 @@ const checkSeatAvailability = async (showId, selectedSeats) => {
 // Create booking
 export const createBooking = async (req, res) => {
   try {
-    // FIXED
-    const {userId} = getAuth(req);    ;
+    const { userId } = getAuth(req);
 
     if (!userId) {
       return res.status(401).json({
@@ -75,49 +74,37 @@ export const createBooking = async (req, res) => {
       bookedSeats: selectedSeats,
     });
 
-    // Update occupied seats
-    selectedSeats.forEach((seat) => {
-      showData.occupiedSeats[seat] = userId;
-    });
-
-    showData.markModified("occupiedSeats");
-    await showData.save();
-
-    //add payment method using stripe
-
-    
-
+    // add payment method using stripe
     const line_items = [
       {
         price_data: {
-          currency: "inr", 
+          currency: "inr",
           product_data: {
             name: showData.movie.title,
           },
-          unit_amount: Math.floor(booking.amount)*100
+          unit_amount: Math.floor(booking.amount) * 100,
         },
-        quantity:1
-      }];
+        quantity: 1,
+      },
+    ];
 
-      const origin = req.headers.origin || `http://${req.headers.host}`;
+    const origin = req.headers.origin || `http://${req.headers.host}`;
 
-      const stripeInstance = new Stripe(process.env.STRIPE_SECRET_KEY);
+    const stripeInstance = new Stripe(process.env.STRIPE_SECRET_KEY);
 
-      const session = await stripeInstance.checkout.sessions.create({
-        success_url:`${origin}/loading/my-bookings`,
-        cancel_url:`${origin}/my-bookings`,
-        line_items:line_items,
-        mode:"payment",
-        metadata:{
-          bookingId:booking._id.toString()
-        },
-        expires_at: Math.floor(Date.now() / 1000) + 30 * 60, // 30 minutes from now
-      })
+    const session = await stripeInstance.checkout.sessions.create({
+      success_url: `${origin}/loading/my-bookings`,
+      cancel_url: `${origin}/my-bookings`,
+      line_items: line_items,
+      mode: "payment",
+      metadata: {
+        bookingId: booking._id.toString(),
+      },
+      expires_at: Math.floor(Date.now() / 1000) + 30 * 60, // 30 minutes from now
+    });
 
-      booking.paymentLink = session.url;
-      await booking.save();
-
-
+    booking.paymentLink = session.url;
+    await booking.save();
 
     res.json({
       success: true,

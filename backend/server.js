@@ -31,7 +31,8 @@ app.use(clerkMiddleware());
 
 const allowedOrigins = [
   "http://localhost:5173",
-  "https://quick-show-tau-ten.vercel.app"
+  "https://quick-show-tau-ten.vercel.app",
+  
 ];
 
 app.use(cors({

@@ -13,7 +13,7 @@ const areSeatMapsEqual = (left = {}, right = {}) => {
 };
 
 export const getOccupiedSeatsFromBookings = async (showId) => {
-  const bookings = await Booking.find({ show: showId }).select("user bookedSeats");
+  const bookings = await Booking.find({ show: showId, isPaid: true }).select("user bookedSeats");
 
   return bookings.reduce((occupiedSeats, booking) => {
     (booking.bookedSeats || []).forEach((seat) => {

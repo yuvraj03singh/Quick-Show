@@ -2,7 +2,51 @@ import Booking from "../model/Booking.js";
 import { clerkClient } from "@clerk/express";
 import Movie from "../model/Movie.js";
 import { getAuth } from "@clerk/express";
+import User from "../model/User.js";
 //api controller to get user bookings
+
+const upsertUserFromClerk = async (userId) => {
+    const clerkUser = await clerkClient.users.getUser(userId);
+
+    const userData = {
+        _id: clerkUser.id,
+        name: `${clerkUser.firstName || ""} ${clerkUser.lastName || ""}`.trim(),
+        email: clerkUser.emailAddresses?.[0]?.emailAddress || "",
+        image: clerkUser.imageUrl || "",
+    };
+
+    await User.findByIdAndUpdate(userId, userData, {
+        new: true,
+        upsert: true,
+        setDefaultsOnInsert: true,
+    });
+};
+
+export const syncUser = async (req, res) => {
+    try {
+        const { userId } = getAuth(req);
+
+        if (!userId) {
+            return res.status(401).json({
+                success: false,
+                message: "Unauthorized",
+            });
+        }
+
+        await upsertUserFromClerk(userId);
+
+        res.json({
+            success: true,
+            message: "User synced successfully",
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({
+            success: false,
+            message: "Error occurred while syncing user",
+        });
+    }
+};
 
 export const getUserBookings = async (req, res) => {
     try {
@@ -14,6 +58,8 @@ export const getUserBookings = async (req, res) => {
                 message: "Unauthorized",
             });
         }
+
+        await upsertUserFromClerk(userId);
 
         const bookings = await Booking.find({ user: userId }).populate({
             path: "show",
@@ -47,6 +93,8 @@ export const getUserBookings = async (req, res) => {
                     message: "Unauthorized",
                 });
             }
+
+            await upsertUserFromClerk(userId);
 
             const user = await clerkClient.users.getUser(userId);
 
@@ -92,6 +140,8 @@ export const getUserBookings = async (req, res) => {
                     message: "Unauthorized",
                 });
             }
+
+            await upsertUserFromClerk(userId);
 
             const user = await clerkClient.users.getUser(userId);
 

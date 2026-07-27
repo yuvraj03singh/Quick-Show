@@ -1,6 +1,39 @@
 
 import Stripe from "stripe";
 import Booking from "../model/Booking.js";
+import { syncShowOccupiedSeats } from "../utils/occupiedSeats.js";
+
+const markBookingAsPaid = async (bookingId) => {
+  if (!bookingId) {
+    return;
+  }
+
+  const booking = await Booking.findById(bookingId);
+
+  if (!booking || booking.isPaid) {
+    return;
+  }
+
+  const conflictingBooking = await Booking.findOne({
+    show: booking.show,
+    isPaid: true,
+    _id: { $ne: booking._id },
+    bookedSeats: { $in: booking.bookedSeats },
+  }).select("_id");
+
+  if (conflictingBooking) {
+    console.error(
+      `Paid seat conflict for booking ${booking._id}. Conflicting booking: ${conflictingBooking._id}`
+    );
+    return;
+  }
+
+  await Booking.findByIdAndUpdate(bookingId, {
+    isPaid: true,
+    paymentLink: null,
+  });
+  await syncShowOccupiedSeats(booking.show);
+};
 
 export const stripeWebhookHandler = async (req, res) => {
   const stripeInstance = new Stripe(process.env.STRIPE_SECRET_KEY);
@@ -21,6 +54,17 @@ export const stripeWebhookHandler = async (req, res) => {
 
   try {
     switch (event.type) {
+      case "checkout.session.completed": {
+        const session = event.data.object;
+
+        if (session.payment_status !== "paid") {
+          break;
+        }
+
+        await markBookingAsPaid(session.metadata?.bookingId);
+        break;
+      }
+
       case "payment_intent.succeeded": {
         const paymentIntent = event.data.object;
 
@@ -31,20 +75,9 @@ export const stripeWebhookHandler = async (req, res) => {
 
         const session = sessionList.data[0];
 
-        if (!session) {
-          return res.status(404).json({
-            success: false,
-            message: "Session not found",
-          });
+        if (session) {
+          await markBookingAsPaid(session.metadata?.bookingId);
         }
-
-        const { bookingId } = session.metadata;
-
-        await Booking.findByIdAndUpdate(bookingId, {
-          isPaid: true,
-          paymentLink: null,
-        });
-
         break;
       }
 
