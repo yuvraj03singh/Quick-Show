@@ -16,7 +16,7 @@ const upsertUserFromClerk = async (userId) => {
     };
 
     await User.findByIdAndUpdate(userId, userData, {
-        new: true,
+        returnDocument: "after",
         upsert: true,
         setDefaultsOnInsert: true,
     });

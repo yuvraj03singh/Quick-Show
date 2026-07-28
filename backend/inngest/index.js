@@ -82,7 +82,7 @@ const syncUserUpdation = inngest.createFunction(
       };
 
       const updatedUser = await User.findByIdAndUpdate(id, userData, {
-        new: true,
+        returnDocument: "after",
         upsert: true,
       });
 
