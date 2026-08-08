@@ -31,19 +31,26 @@ export const AppProvider = ({ children }) => {
 
   const syncUserInDatabase = async () => {
     try {
-      const token = await getToken();
+      if (!user) return;
 
-      if (!token) {
-        return;
-      }
+      const token = await getToken();
 
       await axios.post(
         "/api/user/sync",
-        {},
         {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          userId: user.id,
+          email: user.primaryEmailAddress?.emailAddress || "",
+          name:
+            user.fullName ||
+            `${user.firstName || ""} ${user.lastName || ""}`.trim(),
+          image: user.imageUrl || "",
+        },
+        {
+          headers: token
+            ? {
+                Authorization: `Bearer ${token}`,
+              }
+            : {},
         },
       );
     } catch (error) {

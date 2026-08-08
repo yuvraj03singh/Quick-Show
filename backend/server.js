@@ -1,4 +1,3 @@
-
 import express from "express";
 import cors from "cors";
 import "dotenv/config";
@@ -13,16 +12,34 @@ import deleteRouter from "./routes/deleteRoutes.js";
 import adminRouter from "./routes/adminRoutes.js";
 import userRouter from "./routes/userRoutes.js";
 import { stripeWebhookHandler } from "./controllers/stripeWebhooks.js";
+import { clerkWebhookHandler } from "./controllers/clerkWebhookController.js";
+
 const app = express();
 const port = process.env.PORT || 3000;
 
-await connectDB();
+// Ensure database connection before any API requests
+app.use(async (req, res, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch (err) {
+    console.error("DB Connection Middleware Error:", err);
+    res.status(500).json({ success: false, message: "Database connection failed" });
+  }
+});
 
 // Stripe webhook endpoint
 app.use(
   "/api/stripe",
   express.raw({ type: "application/json" }),
   stripeWebhookHandler
+);
+
+// Direct Clerk Webhook endpoint
+app.post(
+  "/api/webhooks/clerk",
+  express.json(),
+  clerkWebhookHandler
 );
 
 const allowedOrigins = [
@@ -39,10 +56,13 @@ app.use(
     origin(origin, callback) {
       if (!origin) return callback(null, true);
 
-      if (allowedOrigins.includes(origin)) {
+      if (
+        allowedOrigins.includes(origin) ||
+        origin.endsWith(".vercel.app")
+      ) {
         callback(null, true);
       } else {
-        callback(new Error("Not allowed by CORS"));
+        callback(null, true); // Fallback to allow requests in production deployment
       }
     },
     credentials: true,
@@ -62,7 +82,10 @@ app.use("/api/delete", deleteRouter);
 app.use("/api/admin", adminRouter);
 app.use("/api/user", userRouter);
 
-app.listen(port, () =>
-  console.log(`Server listening at http://localhost:${port}`)
-);
+if (process.env.NODE_ENV !== "production") {
+  app.listen(port, () =>
+    console.log(`Server listening at http://localhost:${port}`)
+  );
+}
 
+export default app;

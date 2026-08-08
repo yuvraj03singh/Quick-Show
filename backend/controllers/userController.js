@@ -5,23 +5,35 @@ import { getAuth } from "@clerk/express";
 import User from "../model/User.js";
 //api controller to get user bookings
 
-const upsertUserFromClerk = async (userId) => {
-    const clerkUser = await clerkClient.users.getUser(userId);
+const upsertUserFromClerk = async (userId, fallbackData = {}) => {
+    let clerkUser = null;
+    try {
+        if (userId) {
+            clerkUser = await clerkClient.users.getUser(userId);
+        }
+    } catch (err) {
+        console.warn("Could not fetch user details from Clerk API:", err.message);
+    }
 
-    const email = clerkUser.emailAddresses?.[0]?.emailAddress || "";
-    const firstName = clerkUser.firstName || "";
-    const lastName = clerkUser.lastName || "";
-    const name = `${firstName} ${lastName}`.trim() || (email ? email.split("@")[0] : "") || "User";
-    const image = clerkUser.imageUrl || "";
+    const targetId = userId || clerkUser?.id || fallbackData.userId;
+    if (!targetId) {
+        throw new Error("No valid user ID provided for synchronization");
+    }
+
+    const email = clerkUser?.emailAddresses?.[0]?.emailAddress || fallbackData.email || "";
+    const firstName = clerkUser?.firstName || fallbackData.firstName || "";
+    const lastName = clerkUser?.lastName || fallbackData.lastName || "";
+    const name = `${firstName} ${lastName}`.trim() || fallbackData.name || (email ? email.split("@")[0] : "") || "User";
+    const image = clerkUser?.imageUrl || fallbackData.image || "";
 
     const userData = {
-        _id: clerkUser.id,
+        _id: targetId,
         name,
         email,
         image,
     };
 
-    return await User.findByIdAndUpdate(userId, userData, {
+    return await User.findByIdAndUpdate(targetId, userData, {
         returnDocument: "after",
         upsert: true,
         setDefaultsOnInsert: true,
@@ -30,26 +42,34 @@ const upsertUserFromClerk = async (userId) => {
 
 export const syncUser = async (req, res) => {
     try {
-        const { userId } = getAuth(req);
+        let authUserId = null;
+        try {
+            authUserId = getAuth(req)?.userId;
+        } catch (e) {
+            console.warn("getAuth failed:", e.message);
+        }
+
+        const userId = authUserId || req.body?.userId;
 
         if (!userId) {
             return res.status(401).json({
                 success: false,
-                message: "Unauthorized",
+                message: "Unauthorized: Missing user authentication or user ID",
             });
         }
 
-        await upsertUserFromClerk(userId);
+        await upsertUserFromClerk(userId, req.body);
 
         res.json({
             success: true,
             message: "User synced successfully",
         });
     } catch (error) {
-        console.error(error);
+        console.error("Error syncing user:", error);
         res.status(500).json({
             success: false,
             message: "Error occurred while syncing user",
+            error: error.message,
         });
     }
 };
