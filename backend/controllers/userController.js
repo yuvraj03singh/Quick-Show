@@ -42,6 +42,8 @@ const upsertUserFromClerk = async (userId, fallbackData = {}) => {
 
 export const syncUser = async (req, res) => {
     try {
+        console.log("Received /api/user/sync request with body:", JSON.stringify(req.body));
+
         let authUserId = null;
         try {
             authUserId = getAuth(req)?.userId;
@@ -52,17 +54,20 @@ export const syncUser = async (req, res) => {
         const userId = authUserId || req.body?.userId;
 
         if (!userId) {
+            console.error("Sync user failed: Missing userId in auth and body");
             return res.status(401).json({
                 success: false,
                 message: "Unauthorized: Missing user authentication or user ID",
             });
         }
 
-        await upsertUserFromClerk(userId, req.body);
+        const syncedUser = await upsertUserFromClerk(userId, req.body);
+        console.log("User synced successfully to MongoDB:", syncedUser?._id);
 
         res.json({
             success: true,
             message: "User synced successfully",
+            user: syncedUser,
         });
     } catch (error) {
         console.error("Error syncing user:", error);

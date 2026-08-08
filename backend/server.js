@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import "dotenv/config";
+import mongoose from "mongoose";
 import { clerkMiddleware } from "@clerk/express";
 import connectDB from "./configs/db.js";
 import { inngest, functions } from "./inngest/index.js";
@@ -17,6 +18,37 @@ import { clerkWebhookHandler } from "./controllers/clerkWebhookController.js";
 const app = express();
 const port = process.env.PORT || 3000;
 
+// Health / Status diagnostic route
+app.get("/api/status", async (req, res) => {
+  let dbStatus = "disconnected";
+  let dbError = null;
+  try {
+    if (mongoose.connection.readyState === 1) {
+      dbStatus = "connected";
+    } else {
+      await connectDB();
+      dbStatus = mongoose.connection.readyState === 1 ? "connected" : "failed";
+    }
+  } catch (err) {
+    dbStatus = "error";
+    dbError = err.message;
+  }
+
+  res.json({
+    success: true,
+    server: "live",
+    timestamp: new Date().toISOString(),
+    dbStatus,
+    dbError,
+    envCheck: {
+      hasMongodbUri: !!process.env.MONGODB_URI,
+      hasClerkSecretKey: !!process.env.CLERK_SECRET_KEY,
+      hasClerkPublishableKey: !!process.env.CLERK_PUBLISHABLE_KEY,
+      hasClerkWebhookSecret: !!process.env.CLERK_WEBHOOK_SECRET,
+    },
+  });
+});
+
 // Ensure database connection before any API requests
 app.use(async (req, res, next) => {
   try {
@@ -24,7 +56,7 @@ app.use(async (req, res, next) => {
     next();
   } catch (err) {
     console.error("DB Connection Middleware Error:", err);
-    res.status(500).json({ success: false, message: "Database connection failed" });
+    res.status(500).json({ success: false, message: "Database connection failed", error: err.message });
   }
 });
 

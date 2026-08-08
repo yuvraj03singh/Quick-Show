@@ -35,7 +35,9 @@ export const AppProvider = ({ children }) => {
 
       const token = await getToken();
 
-      await axios.post(
+      console.log("Syncing user to DB. BaseURL:", axios.defaults.baseURL, "User:", user.id);
+
+      const response = await axios.post(
         "/api/user/sync",
         {
           userId: user.id,
@@ -53,8 +55,9 @@ export const AppProvider = ({ children }) => {
             : {},
         },
       );
+      console.log("Sync User Response:", response.data);
     } catch (error) {
-      console.error("Error syncing user in database:", error);
+      console.error("Error syncing user in database:", error?.response?.data || error.message);
     }
   };
 
