@@ -4,8 +4,16 @@ import { useAuth, useUser } from "@clerk/react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
 
-axios.defaults.baseURL =
-  import.meta.env.VITE_BASE_URL || "http://localhost:3000";
+const apiBaseUrl = import.meta.env.VITE_BASE_URL?.replace(/\/$/, "");
+
+// Local development uses the API running on port 3000. A deployed browser must
+// always be given the deployed API URL; falling back to localhost there sends
+// requests to the visitor's computer instead of this application's backend.
+if (!apiBaseUrl && !import.meta.env.DEV) {
+  throw new Error("Missing VITE_BASE_URL for the production API");
+}
+
+axios.defaults.baseURL = apiBaseUrl || "http://localhost:3000";
 
 export const AppContext = createContext();
 

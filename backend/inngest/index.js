@@ -14,25 +14,31 @@ const syncUserCreation = inngest.createFunction(
   },
   async ({ event }) => {
     try {
-      // Ensure DB connection is established (safe-guard in case this runs outside server lifecycle)
       if (mongoose.connection.readyState !== 1) await connectDB();
 
-      // Support payloads where Clerk nests the user under `data.user`
       const payload = event?.data?.user || event?.data || {};
       const { id, first_name, last_name, email_addresses, image_url } = payload;
 
+      const email = email_addresses?.[0]?.email_address || "";
+      const name = `${first_name || ""} ${last_name || ""}`.trim() || (email ? email.split("@")[0] : "") || "User";
+      const image = image_url || "";
+
       const userData = {
         _id: id,
-        name: `${first_name || ""} ${last_name || ""}`.trim(),
-        email: email_addresses?.[0]?.email_address || "",
-        image: image_url || "",
+        name,
+        email,
+        image,
       };
 
       console.log("Creating User:", JSON.stringify(userData));
 
-      const user = await User.create(userData);
+      const user = await User.findByIdAndUpdate(id, userData, {
+        returnDocument: "after",
+        upsert: true,
+        setDefaultsOnInsert: true,
+      });
 
-      console.log("User Created Successfully:", user);
+      console.log("User Created/Synced Successfully:", user);
     } catch (error) {
       console.error("User Creation Error:", error);
     }
@@ -74,11 +80,15 @@ const syncUserUpdation = inngest.createFunction(
       const payload = event?.data?.user || event?.data || {};
       const { id, first_name, last_name, email_addresses, image_url } = payload;
 
+      const email = email_addresses?.[0]?.email_address || "";
+      const name = `${first_name || ""} ${last_name || ""}`.trim() || (email ? email.split("@")[0] : "") || "User";
+      const image = image_url || "";
+
       const userData = {
         _id: id,
-        name: `${first_name || ""} ${last_name || ""}`.trim(),
-        email: email_addresses?.[0]?.email_address || "",
-        image: image_url || "",
+        name,
+        email,
+        image,
       };
 
       const updatedUser = await User.findByIdAndUpdate(id, userData, {

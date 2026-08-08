@@ -14,7 +14,7 @@ import adminRouter from "./routes/adminRoutes.js";
 import userRouter from "./routes/userRoutes.js";
 import { stripeWebhookHandler } from "./controllers/stripeWebhooks.js";
 const app = express();
-const port = 3000;
+const port = process.env.PORT || 3000;
 
 await connectDB();
 
@@ -25,28 +25,33 @@ app.use(
   stripeWebhookHandler
 );
 
-// Middleware
-app.use(express.json());
-app.use(clerkMiddleware());
-
 const allowedOrigins = [
   "http://localhost:5173",
   "https://quick-show-tau-ten.vercel.app",
-  
+  ...(process.env.CLIENT_ORIGINS || "")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean),
 ];
 
-app.use(cors({
-  origin: function(origin, callback) {
-    if (!origin) return callback(null, true);
+app.use(
+  cors({
+    origin(origin, callback) {
+      if (!origin) return callback(null, true);
 
-    if (allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error("Not allowed by CORS"));
-    }
-  },
-  credentials: true,
-}));
+      if (allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
+    credentials: true,
+  })
+);
+
+// Middleware
+app.use(express.json());
+app.use(clerkMiddleware());
 
 app.get("/", (req, res) => res.send("Server is live!"));
 

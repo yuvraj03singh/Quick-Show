@@ -92,7 +92,7 @@ export const stripeWebhookHandler = async (req, res) => {
       success: false,
       message: "Internal Server Error",
     });
-  }
+  }       
 };
 
 

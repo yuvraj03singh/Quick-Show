@@ -8,14 +8,20 @@ import User from "../model/User.js";
 const upsertUserFromClerk = async (userId) => {
     const clerkUser = await clerkClient.users.getUser(userId);
 
+    const email = clerkUser.emailAddresses?.[0]?.emailAddress || "";
+    const firstName = clerkUser.firstName || "";
+    const lastName = clerkUser.lastName || "";
+    const name = `${firstName} ${lastName}`.trim() || (email ? email.split("@")[0] : "") || "User";
+    const image = clerkUser.imageUrl || "";
+
     const userData = {
         _id: clerkUser.id,
-        name: `${clerkUser.firstName || ""} ${clerkUser.lastName || ""}`.trim(),
-        email: clerkUser.emailAddresses?.[0]?.emailAddress || "",
-        image: clerkUser.imageUrl || "",
+        name,
+        email,
+        image,
     };
 
-    await User.findByIdAndUpdate(userId, userData, {
+    return await User.findByIdAndUpdate(userId, userData, {
         returnDocument: "after",
         upsert: true,
         setDefaultsOnInsert: true,
